@@ -1,0 +1,10 @@
+env/
+venv/
+rand_gift.db
+.DS_Store
+sql_scripts/.DS_Store
+__pycache__/
+db/.DS_Store
+db/__pycache__/
+user_config.ini
+rand_gift_bot.log
