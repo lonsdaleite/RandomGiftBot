@@ -8,8 +8,10 @@ class User:
         self.notification_time = None
         self.min_days_num = None
         self.max_days_num = None
+        self.latest_gift_dt = None
+        self.done_flg = None
         
-        self.update_args(user_id, tg_id)
+        self.refresh_args(user_id, tg_id)
 
     def check(self):
         if     self.tg_id is None \
@@ -19,7 +21,7 @@ class User:
             return False
         return True
 
-    def update_args(self, user_id, tg_id):
+    def refresh_args(self, user_id, tg_id):
         user_info = select_actions.get_user_info(user_id, tg_id)
 
         if user_info is not None:
@@ -28,8 +30,24 @@ class User:
             self.notification_time = user_info["notification_time"]
             self.min_days_num = user_info["min_days_num"]
             self.max_days_num = user_info["max_days_num"]
-            
-    def update(self):
-        self.update_args(self.user_id, self.tg_id)
 
+        gift_info = select_actions.get_latest_gift(user_id)
+        if gift_info is not None:
+            self.latest_gift_dt = gift_info["gift_dt"]
+            self.done_flg = bool(gift_info["done_flg"])
+
+    def refresh(self):
+        self.refresh_args(self.user_id, self.tg_id)
+
+    def add_gift(self, gift_dt):
+        dml_actions.add_gift(self.user_id, gift_dt)
+        self.refresh()
+
+    def update_latest_gift(self, gift_dt, done_flg):
+        dml_actions.update_latest_gift(self.user_id, gift_dt, done_flg)
+        self.refresh()
+
+    def update_user_info(self, tg_id=None, notification_time=None, min_days_num=None, max_days_num=None):
+        dml_actions.update_user_info(self.user_id, tg_id=tg_id, notification_time=notification_time, min_days_num=min_days_num, max_days_num=max_days_num)
+        self.refresh()
     

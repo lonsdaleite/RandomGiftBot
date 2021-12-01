@@ -25,23 +25,21 @@ def get_user_info(user_id, tg_id):
     return row
 
 
-def get_last_gift_dt(user_id):
+def get_latest_gift(user_id):
     conn = sql_connect.create_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT gift_dt 
+        SELECT gift_dt, done_flg
         FROM gift 
         WHERE user_id = ? and is_active_flg = '1'
         """, (user_id, ))
     row = cursor.fetchone()
 
     if row is None:
-        config.logger.error("Gift dt for user " + str(user_id) + " not found")
-        gift_dt = None
-    else:
-        gift_dt = row[0]
-
+        config.logger.warn("Gift dt for user " + str(user_id) + " not found")
+        return None
+    
     cursor.close()
     conn.close()
-    return gift_dt
+    return row

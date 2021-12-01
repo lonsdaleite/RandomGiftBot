@@ -60,13 +60,13 @@ def get_user(message=None, tg_id=None, user_id=None):
     if tg_id is not None and tg_id in user_dict:
         user = user_dict[tg_id]
         if not user.check():
-            user.update()
+            user.refresh()
     elif tg_id is None:
         for tg_id_tmp, user_tmp in user_dict.items():
             if user_id is not None and user_tmp.user_id == user_id:
                 user = user_tmp
                 if not user.check():
-                    user.update()
+                    user.refresh()
                     break
     
     if user is None:

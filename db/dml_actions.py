@@ -4,12 +4,12 @@ from datetime import datetime
 import config
 
 
-def add_user_info(user_id, tg_id=None, notification_time=None, min_days_num=None, max_days_num=None):
+def update_user_info(user_id, tg_id=None, notification_time=None, min_days_num=None, max_days_num=None):
     if user_id is None:
         config.logger.error("Can not add a user info without user_id")
         return
 
-    if tg_id is None or notification_time is None or min_days_num is None or max_days_num is None:
+    if tg_id is None and notification_time is None and min_days_num is None and max_days_num is None:
         config.logger.error("Can't update user_id: " + str(user_id) + " info. No arguments passed.")
         return
 
@@ -103,7 +103,7 @@ def add_user(tg_id=None):
     return user_id
 
 
-def add_gift_dt(user_id, gift_dt):
+def add_gift(user_id, gift_dt):
     if user_id is None:
         config.logger.error("Can not add a gift info without user_id")
         return
@@ -118,12 +118,58 @@ def add_gift_dt(user_id, gift_dt):
         """, (user_id, ))
 
     cursor.execute("""
-    INSERT INTO gift (user_id, gift_dt, is_active_flg, processed_dttm) 
-    VALUES (?, ?, ?, ?)
-    """, (user_id, gift_dt, '1', datetime.now()))
+    INSERT INTO gift (user_id, gift_dt, done_flg, is_active_flg, processed_dttm) 
+    VALUES (?, ?, ?, ?, ?)
+    """, (user_id, gift_dt, '0', '1', datetime.now()))
 
 
     config.logger.info("user_id: " + str(user_id) + " gift_dt: " + str(gift_dt) + " added")
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+def update_latest_gift(user_id, gift_dt, done_flg):
+    if user_id is None:
+        config.logger.error("Can not add a gift info without user_id")
+        return
+
+    conn = sql_connect.create_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT count(*) 
+        FROM gift 
+        WHERE 1=1
+            and is_active_flg = '1'
+            and user_id = ?
+        """, (user_id, ))
+
+    if cursor.fetchone()[0] == 0:
+        config.logger.error("Gift not found for user_id: " + str(user_id))
+        cursor.close()
+        conn.close()
+        return
+
+    if gift_dt is not None:
+        cursor.execute("""
+            UPDATE gift
+            SET gift_dt = ?
+            WHERE 1=1
+                and is_active_flg = '1'
+                and user_id = ?
+            """, (gift_dt, user_id))
+
+    if done_flg is not None:
+        cursor.execute("""
+            UPDATE gift
+            SET done_flg = ?
+            WHERE 1=1
+                and is_active_flg = '1'
+                and user_id = ?
+            """, (done_flg, user_id))
+
+    config.logger.info("user_id: " + str(user_id) + " latest gift updated")
 
     conn.commit()
     cursor.close()
