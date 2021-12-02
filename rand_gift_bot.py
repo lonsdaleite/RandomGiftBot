@@ -16,6 +16,7 @@ from db import dml_actions
 import bot_reply_markup
 import common
 import user_state
+import notification
 
 
 main_command_dict = dict(   manual_try='Запустить рандом вручную',
@@ -198,7 +199,12 @@ async def handle_days(message: types.Message, state: FSMContext):
     if user is None:
         return
     await state.finish()
-    # TODO
+    
+    if user.latest_gift_dt is None:
+        msg = "У меня пока нет информации о последнем подарке"
+    else:
+        msg = "С последнего подарка прошло " + str(user.latest_gift_dt) + " дней!"
+    await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.dict_menu(main_command_dict))
 
 
 async def handle_cancel(message: types.Message, state: FSMContext):
@@ -226,4 +232,4 @@ sql_init.run_scripts()
 
 register_handlers_main(common.dp)
 
-executor.start_polling(common.dp, skip_updates=False)
+executor.start_polling(common.dp, skip_updates=False, on_startup=notification.run)

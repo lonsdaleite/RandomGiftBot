@@ -43,3 +43,61 @@ def get_latest_gift(user_id):
     cursor.close()
     conn.close()
     return row
+
+
+def get_latest_notification_log(user_id):
+    conn = sql_connect.create_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT processed_dttm
+        FROM notification_log
+        WHERE user_id = ? and is_active_flg = '1'
+        """, (user_id, ))
+    row = cursor.fetchone()
+
+    if row is None:
+        config.logger.warn("Notification log for user " + str(user_id) + " not found")
+        return None
+    
+    cursor.close()
+    conn.close()
+    return row
+
+
+def get_latest_random_log(user_id):
+    conn = sql_connect.create_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT processed_dttm
+        FROM random_log 
+        WHERE user_id = ? and is_active_flg = '1'
+        """, (user_id, ))
+    row = cursor.fetchone()
+
+    if row is None:
+        config.logger.warn("Random log for user " + str(user_id) + " not found")
+        return None
+    
+    cursor.close()
+    conn.close()
+    return row
+
+def get_tg_id_by_time(notification_time):
+    conn = sql_connect.create_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT tg_id 
+        FROM user
+        WHERE 1=1
+            and deleted_flg = '0'
+            and notification_time = ?
+        """, (notification_time, ))
+    result = cursor.fetchall()
+    tg_id_list = [x["tg_id"] for x in result]
+
+    cursor.close()
+    conn.close()
+    return tg_id_list
