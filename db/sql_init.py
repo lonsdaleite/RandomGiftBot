@@ -11,7 +11,7 @@ def run_scripts(recreate=False):
             sql_script = sql_file.read()
             cursor.executescript(sql_script)
 
-    for file in ["user.sql", "gift.sql"]:
+    for file in ["user.sql", "gift.sql", "notification_log.sql", "random_log.sql"]:
         with open(config.SQLITE3_SCRIPT_DIR + '/' + file, 'r') as sql_file:
             sql_script = sql_file.read()
             cursor.executescript(sql_script)

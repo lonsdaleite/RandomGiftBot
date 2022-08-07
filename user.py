@@ -18,7 +18,8 @@ class User:
         if self.tg_id is None \
                 or self.notification_time is None \
                 or self.min_days_num is None \
-                or self.max_days_num is None:
+                or self.max_days_num is None \
+                or self.latest_gift_dt is None:
             return False
         return True
 
@@ -32,7 +33,7 @@ class User:
             self.min_days_num = user_info["min_days_num"]
             self.max_days_num = user_info["max_days_num"]
 
-        gift_info = select_actions.get_latest_gift(user_id)
+        gift_info = select_actions.get_latest_gift(self.user_id)
         if gift_info is not None:
             self.latest_gift_dt = gift_info["gift_dt"]
             self.done_flg = bool(gift_info["done_flg"])

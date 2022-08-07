@@ -201,8 +201,8 @@ def add_notification_log(user_id, notification_time):
         """, (user_id,))
 
     cursor.execute("""
-    INSERT INTO gift (user_id, notification_time, is_active_flg, processed_dttm) 
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO notification_log (user_id, notification_time, is_active_flg, processed_dttm) 
+    VALUES (?, ?, ?, ?)
     """, (user_id, notification_time, '1', datetime.now()))
 
     config.logger.info("user_id: " + str(user_id) + " notification log added")
@@ -231,7 +231,7 @@ def add_random_log(user_id, since_latest_gift_days_cnt, random_days_cnt):
     VALUES (?, ?, ?, ?, ?)
     """, (user_id, since_latest_gift_days_cnt, random_days_cnt, '1', datetime.now()))
 
-    config.logger.info("user_id: " + str(user_id) + " notification log added")
+    config.logger.info("user_id: " + str(user_id) + " random log added")
 
     conn.commit()
     cursor.close()

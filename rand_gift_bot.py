@@ -1,3 +1,4 @@
+from datetime import date, datetime
 import re
 import time
 from aiogram import executor, types
@@ -5,6 +6,7 @@ from aiogram.dispatcher import FSMContext
 import bot_reply_markup
 import common
 import notification
+import randomize
 import user_state
 from db import dml_actions
 from db import sql_init
@@ -15,7 +17,8 @@ main_command_dict = dict(manual_try='Запустить рандом вручн�
                          help='Помощь с командами')
 
 initial_settings_dict = dict(notification_time='Время для уведомления',
-                             set_days='Число дней с последнего подарка')
+                             set_days='Число дней с последнего подарка',
+                             set_latest_date='Дата последнего подарка')
 
 settings_dict = dict(initial_settings_dict)
 settings_dict['cancel'] = 'Главное меню'
@@ -184,12 +187,48 @@ async def handle_action_set_days(message: types.Message, state: FSMContext):
         await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.cancel())
 
 
+async def handle_set_latest_date(message: types.Message, state: FSMContext):
+    user = await validate(message, state)
+    if user is None:
+        return
+
+    msg = "Укажи дату, когда ты в последний раз дарил(а) подарок. Формат даты YYYY-MM-DD. Например: 2022-04-15."
+    if user.latest_gift_dt is not None:
+        msg += "\nДата, про которую я знаю: " + user.latest_gift_dt
+    await state.set_state(user_state.InitialState.waiting_for_set_latest_date)
+    await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.cancel())
+
+
+async def handle_action_set_latest_date(message: types.Message, state: FSMContext):
+    user = await validate(message, state)
+    if user is None:
+        return
+
+    try:
+        dt_str = message.text
+        parsed_dt = datetime.strptime(dt_str, "%Y-%m-%d")
+
+        user.add_gift(dt_str)
+        user.update_latest_gift(dt_str, True)
+
+        await state.set_state(user_state.InitialState.waiting_for_settings)
+        msg = "Дата последнего подарка: " + dt_str
+        answer_dict = settings_dict
+        if not user.check():
+            answer_dict = initial_settings_dict
+        await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.dict_menu(answer_dict, 1))
+    except ValueError:
+        msg = "Неправильный формат! Формат даты YYYY-MM-DD. Например: 2022-04-15."
+        await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.cancel())
+
+
 async def handle_manual_try(message: types.Message, state: FSMContext):
     user = await validate(message, state)
     if user is None:
         return
     await state.finish()
-    # TODO
+    if randomize.send_or_not(user):
+        await notification.notify_user(user)
 
 
 async def handle_days(message: types.Message, state: FSMContext):
@@ -201,7 +240,8 @@ async def handle_days(message: types.Message, state: FSMContext):
     if user.latest_gift_dt is None:
         msg = "У меня пока нет информации о последнем подарке"
     else:
-        msg = "С последнего подарка прошло " + str(user.latest_gift_dt) + " дней!"
+        msg = "С последнего подарка прошло " + \
+              str((date.today() - datetime.strptime(user.latest_gift_dt, "%Y-%m-%d").date()).days) + " дней!"
     await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.dict_menu(main_command_dict))
 
 
@@ -219,9 +259,14 @@ def register_handlers_main():
                                        state=[user_state.InitialState.waiting_for_settings])
     common.dp.register_message_handler(handle_set_days, text=['/set_days', settings_dict['set_days']],
                                        state=[user_state.InitialState.waiting_for_settings])
+    common.dp.register_message_handler(handle_set_latest_date, text=['/set_latest_date',
+                                       settings_dict['set_latest_date']],
+                                       state=[user_state.InitialState.waiting_for_settings])
     common.dp.register_message_handler(handle_action_set_notification_time,
                                        state=[user_state.InitialState.waiting_for_set_notification_time])
     common.dp.register_message_handler(handle_action_set_days, state=[user_state.InitialState.waiting_for_set_days])
+    common.dp.register_message_handler(handle_action_set_latest_date,
+                                       state=[user_state.InitialState.waiting_for_set_latest_date])
     common.dp.register_message_handler(handle_settings, text=['/settings', main_command_dict['settings']])
     common.dp.register_message_handler(handle_days, text=['/days', main_command_dict['days']])
     common.dp.register_message_handler(handle_manual_try, text=['/manual_try', main_command_dict['manual_try']])
