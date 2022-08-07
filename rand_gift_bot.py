@@ -114,7 +114,8 @@ async def handle_set_notification_time(message: types.Message, state: FSMContext
     if user is None:
         return
 
-    msg = "Выбери время, когда тебе удобно получать уведомления. Введи время в формате ЧЧ:ММ. Например: 13:00"
+    msg = "Выбери время, когда тебе удобно получать уведомления. Введи московское время в формате ЧЧ:ММ. Например: " \
+          "13:00"
     if user.notification_time is not None:
         msg += "\nТекущее время для уведомлений: " + user.notification_time
     await state.set_state(user_state.InitialState.waiting_for_set_notification_time)
@@ -140,7 +141,7 @@ async def handle_action_set_notification_time(message: types.Message, state: FSM
             answer_dict = initial_settings_dict
         await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.dict_menu(answer_dict, 1))
     except ValueError:
-        msg = "Неправильный формат! Введи время в формате ЧЧ:ММ. Например: 13:00"
+        msg = "Неправильный формат! Введи московское время в формате ЧЧ:ММ. Например: 13:00"
         await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.cancel())
 
 
