@@ -8,3 +8,4 @@ db/.DS_Store
 db/__pycache__/
 user_config.ini
 rand_gift_bot.log
+.idea

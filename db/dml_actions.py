@@ -1,7 +1,6 @@
-from db import sql_connect
-from db import select_actions
 from datetime import datetime
 import config
+from db import sql_connect
 
 
 def update_user_info(user_id, tg_id=None, notification_time=None, min_days_num=None, max_days_num=None):
@@ -20,7 +19,7 @@ def update_user_info(user_id, tg_id=None, notification_time=None, min_days_num=N
         SELECT count(*) 
         FROM user 
         WHERE user_id = ? and deleted_flg = '0'
-        """, (user_id, ))
+        """, (user_id,))
 
     if cursor.fetchone()[0] == 0:
         config.logger.error("user_id " + str(user_id) + " does not exist")
@@ -70,12 +69,12 @@ def add_user(tg_id=None):
 
     conn = sql_connect.create_connection()
     cursor = conn.cursor()
-    
+
     cursor.execute("""
         SELECT user_id, deleted_flg
         FROM user 
         WHERE tg_id = ?
-        """, (tg_id, ))
+        """, (tg_id,))
 
     row = cursor.fetchone()
 
@@ -92,7 +91,7 @@ def add_user(tg_id=None):
             """, (user_id, tg_id, '0', datetime.now()))
 
         config.logger.info("user_id: " + str(user_id) + " tg_id: " + str(tg_id) + " added")
-    elif row['deleted_flg'] =='0':
+    elif row['deleted_flg'] == '0':
         config.logger.error("tg_id: " + str(tg_id) + " already exists")
         cursor.close()
         conn.close()
@@ -102,7 +101,7 @@ def add_user(tg_id=None):
             UPDATE user
             SET deleted_flg = '0'
             WHERE tg_id = ?
-            """, (tg_id, ))
+            """, (tg_id,))
 
         user_id = row['user_id']
         config.logger.info("tg_id: " + str(tg_id) + " enabled")
@@ -126,13 +125,12 @@ def add_gift(user_id, gift_dt):
         UPDATE gift
         SET is_active_flg = '0'
         WHERE user_id = ?
-        """, (user_id, ))
+        """, (user_id,))
 
     cursor.execute("""
     INSERT INTO gift (user_id, gift_dt, done_flg, is_active_flg, processed_dttm) 
     VALUES (?, ?, ?, ?, ?)
     """, (user_id, gift_dt, '0', '1', datetime.now()))
-
 
     config.logger.info("user_id: " + str(user_id) + " gift_dt: " + str(gift_dt) + " added")
 
@@ -155,7 +153,7 @@ def update_latest_gift(user_id, gift_dt, done_flg):
         WHERE 1=1
             and is_active_flg = '1'
             and user_id = ?
-        """, (user_id, ))
+        """, (user_id,))
 
     if cursor.fetchone()[0] == 0:
         config.logger.error("Gift not found for user_id: " + str(user_id))
@@ -200,13 +198,12 @@ def add_notification_log(user_id, notification_time):
         UPDATE notification_log
         SET is_active_flg = '0'
         WHERE user_id = ?
-        """, (user_id, ))
+        """, (user_id,))
 
     cursor.execute("""
     INSERT INTO gift (user_id, notification_time, is_active_flg, processed_dttm) 
     VALUES (?, ?, ?, ?, ?)
     """, (user_id, notification_time, '1', datetime.now()))
-
 
     config.logger.info("user_id: " + str(user_id) + " notification log added")
 
@@ -227,17 +224,15 @@ def add_random_log(user_id, since_latest_gift_days_cnt, random_days_cnt):
         UPDATE random_log
         SET is_active_flg = '0'
         WHERE user_id = ?
-        """, (user_id, ))
+        """, (user_id,))
 
     cursor.execute("""
     INSERT INTO gift (user_id, since_latest_gift_days_cnt, random_days_cnt, is_active_flg, processed_dttm) 
     VALUES (?, ?, ?, ?, ?)
     """, (user_id, since_latest_gift_days_cnt, random_days_cnt, '1', datetime.now()))
 
-
     config.logger.info("user_id: " + str(user_id) + " notification log added")
 
     conn.commit()
     cursor.close()
     conn.close()
-

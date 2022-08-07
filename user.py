@@ -1,6 +1,7 @@
 from db import select_actions
 from db import dml_actions
 
+
 class User:
     def __init__(self, user_id, tg_id):
         self.user_id = None
@@ -10,14 +11,14 @@ class User:
         self.max_days_num = None
         self.latest_gift_dt = None
         self.done_flg = None
-        
+
         self.refresh_args(user_id, tg_id)
 
     def check(self):
-        if     self.tg_id is None \
-            or self.notification_time is None \
-            or self.min_days_num is None \
-            or self.max_days_num is None :
+        if self.tg_id is None \
+                or self.notification_time is None \
+                or self.min_days_num is None \
+                or self.max_days_num is None:
             return False
         return True
 
@@ -48,6 +49,6 @@ class User:
         self.refresh()
 
     def update_user_info(self, tg_id=None, notification_time=None, min_days_num=None, max_days_num=None):
-        dml_actions.update_user_info(self.user_id, tg_id=tg_id, notification_time=notification_time, min_days_num=min_days_num, max_days_num=max_days_num)
+        dml_actions.update_user_info(self.user_id, tg_id=tg_id, notification_time=notification_time,
+                                     min_days_num=min_days_num, max_days_num=max_days_num)
         self.refresh()
-    

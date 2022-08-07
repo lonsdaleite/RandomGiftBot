@@ -1,6 +1,6 @@
-from db import sql_connect
-from datetime import datetime
 import config
+from db import sql_connect
+
 
 def get_user_info(user_id, tg_id):
     conn = sql_connect.create_connection()
@@ -83,6 +83,7 @@ def get_latest_random_log(user_id):
     cursor.close()
     conn.close()
     return row
+
 
 def get_tg_id_by_time(notification_time):
     conn = sql_connect.create_connection()

@@ -1,11 +1,12 @@
 from db import sql_connect
 import config
 
+
 def run_scripts(recreate=False):
     conn = sql_connect.create_connection()
     cursor = conn.cursor()
 
-    if (recreate):
+    if recreate:
         with open(config.SQLITE3_SCRIPT_DIR + '/drop_all.sql', 'r') as sql_file:
             sql_script = sql_file.read()
             cursor.executescript(sql_script)

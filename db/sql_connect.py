@@ -1,6 +1,6 @@
-import config
 import sqlite3
-from datetime import datetime
+import config
+
 
 def create_connection():
     conn = sqlite3.connect(config.SQLITE3_DB)

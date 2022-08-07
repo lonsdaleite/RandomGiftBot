@@ -1,9 +1,10 @@
+import traceback
+
 from aiogram import Bot, Dispatcher
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
-import traceback
+
 import config
 import user as us
-import bot_reply_markup
 
 user_dict = {}
 
@@ -40,7 +41,8 @@ async def print_log(user, message, state, command_dict=None):
 async def send_message(tg_id, text, reply_markup=None):
     try:
         if config.DEBUG_TG_ID is not None:
-            await bot.send_message(config.DEBUG_TG_ID, "Message to " + str(tg_id) + "\n" + text, reply_markup=reply_markup)
+            await bot.send_message(config.DEBUG_TG_ID, "Message to " + str(tg_id) + "\n" + text,
+                                   reply_markup=reply_markup)
         else:
             await bot.send_message(tg_id, text, reply_markup=reply_markup)
     except:
@@ -77,4 +79,3 @@ def get_user(message=None, tg_id=None, user_id=None):
         user_dict[tg_id] = user
 
     return user
-
