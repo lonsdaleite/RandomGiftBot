@@ -18,7 +18,7 @@ extra_command_dict = dict(gift_done='Подарок подарен')
 extra_command_dict.update(main_command_dict)
 
 initial_settings_dict = dict(notification_time='Время для уведомления',
-                             set_days='Число дней с последнего подарка',
+                             set_days='Диапазон дней',
                              set_latest_date='Дата последнего подарка')
 
 settings_dict = dict(initial_settings_dict)
@@ -108,7 +108,7 @@ async def request_settings(message: types.Message, state: FSMContext):
 
     await state.set_state(user_state.InitialState.waiting_for_settings)
     msg = "Для начала установи нужные параметры!"
-    await common.send_message(tg_id, msg, reply_markup=bot_reply_markup.dict_menu(initial_settings_dict, 1))
+    await common.send_message(tg_id, msg, reply_markup=bot_reply_markup.dict_menu(initial_settings_dict, 2))
 
 
 async def handle_settings(message: types.Message, state: FSMContext):
@@ -118,7 +118,7 @@ async def handle_settings(message: types.Message, state: FSMContext):
 
     await state.set_state(user_state.InitialState.waiting_for_settings)
     msg = "Установи нужные параметры!"
-    await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.dict_menu(settings_dict, 1))
+    await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.dict_menu(settings_dict, 2))
 
 
 async def handle_set_notification_time(message: types.Message, state: FSMContext):
@@ -152,7 +152,7 @@ async def handle_action_set_notification_time(message: types.Message, state: FSM
         if not user.check():
             answer_dict = initial_settings_dict
         await state.set_state(user_state.InitialState.waiting_for_settings)
-        await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.dict_menu(answer_dict, 1))
+        await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.dict_menu(answer_dict, 2))
     except ValueError:
         msg = "Неправильный формат! Введи московское время в формате ЧЧ:ММ. Например: 13:00"
         await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.cancel())
@@ -195,7 +195,7 @@ async def handle_action_set_days(message: types.Message, state: FSMContext):
         if not user.check():
             answer_dict = initial_settings_dict
         await state.set_state(user_state.InitialState.waiting_for_settings)
-        await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.dict_menu(answer_dict, 1))
+        await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.dict_menu(answer_dict, 2))
     except ValueError:
         msg = "Неправильный формат! Введи два числа с любым разделителем: минимальное и максимальное число дней. " \
               "Например: 14-30 "
@@ -232,7 +232,7 @@ async def handle_action_set_latest_date(message: types.Message, state: FSMContex
         if not user.check():
             answer_dict = initial_settings_dict
         await state.set_state(user_state.InitialState.waiting_for_settings)
-        await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.dict_menu(answer_dict, 1))
+        await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.dict_menu(answer_dict, 2))
     except ValueError:
         msg = "Неправильный формат! Формат даты YYYY-MM-DD. Например: 2022-04-15."
         await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.cancel())
