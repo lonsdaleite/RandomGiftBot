@@ -71,6 +71,27 @@ def update_user_info(user_id, tg_id=None, notification_time=None, min_days_num=N
     conn.close()
 
 
+def disable_user(user_id):
+    if user_id is None:
+        config.logger.error("Can not disable user without user_id")
+        return
+
+    conn = sql_connect.create_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE user
+        SET deleted_flg = '1'
+        WHERE user_id = ?
+        """, (user_id, ))
+
+    config.logger.info("user_id: " + str(user_id) + " disabled")
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+
 def add_user(tg_id=None):
     if tg_id is None:
         config.logger.error("Can not add a user without telegram id")

@@ -1,10 +1,10 @@
 import traceback
-
 from aiogram import Bot, Dispatcher
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
-
+from aiogram.utils.exceptions import BotBlocked
 import config
 import user as us
+from db import dml_actions
 
 user_dict = {}
 
@@ -45,6 +45,10 @@ async def send_message(tg_id, text, reply_markup=None):
                                    reply_markup=reply_markup)
         else:
             await bot.send_message(tg_id, text, reply_markup=reply_markup)
+    except BotBlocked:
+        config.logger.warn("Bot blocked for user: " + str(tg_id))
+        dml_actions.disable_user(get_user(tg_id=tg_id).user_id)
+        user_dict.pop(tg_id)
     except:
         config.logger.debug("Can not send a message to: " + str(tg_id))
         traceback.print_exc() 

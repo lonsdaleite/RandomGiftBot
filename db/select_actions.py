@@ -13,7 +13,7 @@ def get_user_info(user_id, tg_id):
     cursor.execute("""
         SELECT user_id, tg_id, notification_time, min_days_num, max_days_num, time_to_gift_flg
         FROM user 
-        WHERE user_id = ? or tg_id = ?
+        WHERE (user_id = ? or tg_id = ?) and deleted_flg = '0'
         """, (user_id, tg_id))
     row = cursor.fetchone()
 
