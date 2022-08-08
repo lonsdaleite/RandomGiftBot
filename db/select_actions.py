@@ -11,7 +11,7 @@ def get_user_info(user_id, tg_id):
         return
 
     cursor.execute("""
-        SELECT user_id, tg_id, notification_time, min_days_num, max_days_num
+        SELECT user_id, tg_id, notification_time, min_days_num, max_days_num, time_to_gift_flg
         FROM user 
         WHERE user_id = ? or tg_id = ?
         """, (user_id, tg_id))
@@ -30,7 +30,7 @@ def get_latest_gift(user_id):
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT gift_dt, done_flg
+        SELECT gift_dt
         FROM gift 
         WHERE user_id = ? and is_active_flg = '1'
         """, (user_id, ))
@@ -85,20 +85,20 @@ def get_latest_random_log(user_id):
     return row
 
 
-def get_tg_id_by_time(notification_time):
+def get_user_id_by_time(notification_time):
     conn = sql_connect.create_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT tg_id 
+        SELECT user_id 
         FROM user
         WHERE 1=1
             and deleted_flg = '0'
             and notification_time = ?
         """, (notification_time, ))
     result = cursor.fetchall()
-    tg_id_list = [x["tg_id"] for x in result]
+    user_id_list = [x["user_id"] for x in result]
 
     cursor.close()
     conn.close()
-    return tg_id_list
+    return user_id_list

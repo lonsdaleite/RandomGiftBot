@@ -28,3 +28,9 @@ def user_accept():
     markup = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
     markup.add("Давай начнем!")
     return markup
+
+
+def time_to_gift():
+    markup = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
+    markup.add("Время дарить подарки!")
+    return markup

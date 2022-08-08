@@ -7,3 +7,4 @@ class InitialState(StatesGroup):
     waiting_for_set_notification_time = State()
     waiting_for_set_days = State()
     waiting_for_set_latest_date = State()
+    waiting_for_gift_done = State()

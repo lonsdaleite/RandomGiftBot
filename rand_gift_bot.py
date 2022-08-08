@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 import re
 import time
 from aiogram import executor, types
@@ -6,15 +6,16 @@ from aiogram.dispatcher import FSMContext
 import bot_reply_markup
 import common
 import notification
-import randomize
 import user_state
 from db import dml_actions
 from db import sql_init
 
-main_command_dict = dict(manual_try='Запустить рандом вручную',
-                         days='Сколько дней прошло?',
+main_command_dict = dict(days='Сколько дней прошло?',
                          settings='Настройки',
                          help='Помощь с командами')
+
+extra_command_dict = dict(gift_done='Подарок подарен')
+extra_command_dict.update(main_command_dict)
 
 initial_settings_dict = dict(notification_time='Время для уведомления',
                              set_days='Число дней с последнего подарка',
@@ -22,6 +23,11 @@ initial_settings_dict = dict(notification_time='Время для уведомл
 
 settings_dict = dict(initial_settings_dict)
 settings_dict['cancel'] = 'Главное меню'
+
+gift_done_dict = dict(today="Сегодня",
+                      yesterday="Вчера",
+                      date="Ввести дату",
+                      cancel="Отмена")
 
 
 # Handle and remove any state when sending /start and /help
@@ -34,14 +40,20 @@ async def handle_welcome(message: types.Message, state: FSMContext):
     user = await validate(message, state)
     if user is None:
         return
+
+    response_dict = main_command_dict
+    if user.time_to_gift_flg:
+        response_dict = extra_command_dict
+
     msg = "Привет!\n" \
           + "Я бот, который напоминает дарить цветы и прочие подарки близким людям!\n" \
           + "Я случайным образом выберу день, когда нужно делать подарок, и скажу тебе об этом!\n" \
           + "Вот список команд, которые я понимаю:\n"
-    for k, v in main_command_dict.items():
+    for k, v in response_dict.items():
         msg += "/{} : {}\n".format(k, v)
     msg += "А также ты можешь воспользоваться кнопками ниже ⬇️"
-    await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.dict_menu(main_command_dict))
+
+    await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.dict_menu(response_dict))
 
 
 # Main message preparation and validation
@@ -50,7 +62,7 @@ async def handle_welcome(message: types.Message, state: FSMContext):
 # Else returns None
 async def validate(message: types.Message, state: FSMContext):
     user = common.get_user(message=message)
-    await common.print_log(user, message, state, main_command_dict)
+    await common.print_log(user, message, state, extra_command_dict)
 
     if user is None:
         await request_user_accept(message, state)
@@ -135,10 +147,11 @@ async def handle_action_set_notification_time(message: types.Message, state: FSM
         user.update_user_info(notification_time=parsed_time_str)
 
         await state.set_state(user_state.InitialState.waiting_for_settings)
-        msg = "Время для уведомлений установлено: " + parsed_time_str
+        msg = "Время для уведомлений установлено: " + parsed_time_str + " по московскому времени"
         answer_dict = settings_dict
         if not user.check():
             answer_dict = initial_settings_dict
+        await state.set_state(user_state.InitialState.waiting_for_settings)
         await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.dict_menu(answer_dict, 1))
     except ValueError:
         msg = "Неправильный формат! Введи московское время в формате ЧЧ:ММ. Например: 13:00"
@@ -181,6 +194,7 @@ async def handle_action_set_days(message: types.Message, state: FSMContext):
         answer_dict = settings_dict
         if not user.check():
             answer_dict = initial_settings_dict
+        await state.set_state(user_state.InitialState.waiting_for_settings)
         await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.dict_menu(answer_dict, 1))
     except ValueError:
         msg = "Неправильный формат! Введи два числа с любым разделителем: минимальное и максимальное число дней. " \
@@ -210,26 +224,52 @@ async def handle_action_set_latest_date(message: types.Message, state: FSMContex
         parsed_dt = datetime.strptime(dt_str, "%Y-%m-%d")
 
         user.add_gift(dt_str)
-        user.update_latest_gift(dt_str, True)
+        user.update_user_info(time_to_gift_flg=False)
 
         await state.set_state(user_state.InitialState.waiting_for_settings)
         msg = "Дата последнего подарка: " + dt_str
         answer_dict = settings_dict
         if not user.check():
             answer_dict = initial_settings_dict
+        await state.set_state(user_state.InitialState.waiting_for_settings)
         await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.dict_menu(answer_dict, 1))
     except ValueError:
         msg = "Неправильный формат! Формат даты YYYY-MM-DD. Например: 2022-04-15."
         await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.cancel())
 
 
-async def handle_manual_try(message: types.Message, state: FSMContext):
+async def handle_gift_done(message: types.Message, state: FSMContext):
     user = await validate(message, state)
     if user is None:
         return
-    await state.finish()
-    if randomize.send_or_not(user):
-        await notification.notify_user(user)
+
+    if user.time_to_gift_flg:
+        msg = "Когда ты подарил(а) подарок?"
+        await state.set_state(user_state.InitialState.waiting_for_gift_done)
+        await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.dict_menu(gift_done_dict, 2))
+
+
+async def handle_action_gift_done(message: types.Message, state: FSMContext):
+    user = await validate(message, state)
+    if user is None:
+        return
+
+    if message.text == gift_done_dict["date"]:
+        await handle_set_latest_date(message, state)
+    else:
+        if message.text == gift_done_dict["today"]:
+            user.add_gift(date.today().strftime("%Y-%m-%d"))
+        elif message.text == gift_done_dict["yesterday"]:
+            user.add_gift((date.today() - timedelta(days=1)).strftime("%Y-%m-%d"))
+        else:
+            msg = "Неверная команда, попробуй еще раз"
+            await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.dict_menu(gift_done_dict, 2))
+            return
+
+        user.update_user_info(time_to_gift_flg=False)
+        await state.finish()
+        await common.send_message(user.tg_id, "Отлично! Дата последнего подарка установлена",
+                                  reply_markup=bot_reply_markup.dict_menu(main_command_dict))
 
 
 async def handle_days(message: types.Message, state: FSMContext):
@@ -243,17 +283,30 @@ async def handle_days(message: types.Message, state: FSMContext):
     else:
         msg = "С последнего подарка прошло " + \
               str((date.today() - datetime.strptime(user.latest_gift_dt, "%Y-%m-%d").date()).days) + " дней!"
-    await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.dict_menu(main_command_dict))
+
+    response_dict = main_command_dict
+    if user.time_to_gift_flg:
+        response_dict = extra_command_dict
+    await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.dict_menu(response_dict))
 
 
 async def handle_cancel(message: types.Message, state: FSMContext):
     await state.finish()
-    await handle_welcome(message, state)
+    user = await validate(message, state)
+    if user is None:
+        return
+
+    response_dict = main_command_dict
+    if user.time_to_gift_flg:
+        response_dict = extra_command_dict
+    await common.send_message(user.tg_id, "Перехожу в главное меню",
+                              reply_markup=bot_reply_markup.dict_menu(response_dict))
 
 
 def register_handlers_main():
     common.dp.register_message_handler(handle_start, commands=['start', 'help'], state='*')
-    common.dp.register_message_handler(handle_cancel, text=['/cancel', 'Отмена', 'Главное меню'], state='*')
+    common.dp.register_message_handler(handle_cancel,
+                                       text=['/cancel', 'Отмена', 'Главное меню', 'Время дарить подарки!'], state='*')
     common.dp.register_message_handler(handle_action_user_accept, state=user_state.InitialState.waiting_for_accept)
     common.dp.register_message_handler(handle_set_notification_time,
                                        text=['/notification_time', settings_dict['notification_time']],
@@ -268,9 +321,11 @@ def register_handlers_main():
     common.dp.register_message_handler(handle_action_set_days, state=[user_state.InitialState.waiting_for_set_days])
     common.dp.register_message_handler(handle_action_set_latest_date,
                                        state=[user_state.InitialState.waiting_for_set_latest_date])
-    common.dp.register_message_handler(handle_settings, text=['/settings', main_command_dict['settings']])
-    common.dp.register_message_handler(handle_days, text=['/days', main_command_dict['days']])
-    common.dp.register_message_handler(handle_manual_try, text=['/manual_try', main_command_dict['manual_try']])
+    common.dp.register_message_handler(handle_settings, text=['/settings', extra_command_dict['settings']])
+    common.dp.register_message_handler(handle_days, text=['/days', extra_command_dict['days']])
+    common.dp.register_message_handler(handle_gift_done, text=['/gift_done', extra_command_dict['gift_done']])
+    common.dp.register_message_handler(handle_action_gift_done,
+                                       state=[user_state.InitialState.waiting_for_gift_done])
 
     common.dp.register_message_handler(handle_welcome)
 
