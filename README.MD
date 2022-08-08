@@ -6,9 +6,14 @@
 ## Конфигурация
 Создайте файл `user_config.ini` и заполните его. Например:
 ```
+[sqlite3]
+db_file=rand_gift.db
+sql_scripts=./sql_scripts
+
 [bot]
 bot_tg_token=ID бота
 
 [debug]
-debug=false
+debug=False
+debug_tg_id=-1
 ```
