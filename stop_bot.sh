@@ -1,18 +1,36 @@
 #!/bin/bash
 
-pid=$(ps aux | grep 'rand_gift_bot.py' | grep -vw grep | awk '{print $2}')
+LOG_FILE=$1
 
-if [ -n "$pid" ]; then
-    kill $pid
-    sleep 1
-    pid=$(ps aux | grep 'rand_gift_bot.py' | grep -vw grep | awk '{print $2}')
+bot_file_name="rand_gift_bot.py"
+
+stop_bot() {
+    pid=$(ps aux | grep -w "$bot_file_name" | grep -vw grep | awk '{print $2}')
+
     if [ -n "$pid" ]; then
-        kill -9 $pid
-        echo "Random gift bot killed"
+        kill $pid
+        sleep 1
+        pid=$(ps aux | grep -w "$bot_file_name" | grep -vw grep | awk '{print $2}')
+        if [ -n "$pid" ]; then
+            kill -9 $pid
+            echo "Bot killed"
+        else
+            echo "Bot stopped"
+        fi
     else
-        echo "Random gift bot stopped"
+        echo "Bot not found"
     fi
-else
-    echo "Random gift bot not found"
+}
+
+if [ -n "$LOG_FILE" ]; then
+    touch $LOG_FILE
+    if [ ! -f "$LOG_FILE" ]; then
+        echo "File $LOG_FILE does not exist"
+    fi
 fi
 
+if [ -z "$LOG_FILE" ] || [ ! -f "$LOG_FILE" ]; then
+    stop_bot
+else
+    stop_bot 2>&1 | tee -a $LOG_FILE
+fi
