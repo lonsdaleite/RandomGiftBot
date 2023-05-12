@@ -17,7 +17,8 @@ main_command_dict = dict(days='Сколько дней прошло?',
 extra_command_dict = dict(gift_done='Подарок подарен')
 extra_command_dict.update(main_command_dict)
 
-initial_settings_dict = dict(notification_time='Время для уведомления',
+initial_settings_dict = dict(time_zone='Часовой пояс',
+                             notification_time='Время для уведомления',
                              set_days='Диапазон дней',
                              set_latest_date='Дата последнего подарка')
 
@@ -121,12 +122,59 @@ async def handle_settings(message: types.Message, state: FSMContext):
     await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.dict_menu(settings_dict, 2))
 
 
+async def handle_set_time_zone(message: types.Message, state: FSMContext):
+    user = await validate(message, state)
+    if user is None:
+        return
+
+    msg = "Установи свой часовой пояс. Введи значение в формате +Ч или -Ч. Например, +3 для Москвы."
+    if user.time_zone is not None:
+        if user.time_zone >= 0:
+            time_zone_str = "+" + str(user.time_zone)
+        else:
+            time_zone_str = str(user.time_zone)
+        msg += "\nТекущий часовой пояс: UTC" + time_zone_str
+    await state.set_state(user_state.InitialState.waiting_for_set_time_zone)
+    await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.cancel())
+
+
+async def handle_action_set_time_zone(message: types.Message, state: FSMContext):
+    user = await validate(message, state)
+    if user is None:
+        return
+
+    try:
+        time_zone_str = message.text
+        time_zone = int(time_zone_str)
+
+        if time_zone < -12 or time_zone > 14:
+            raise ValueError
+
+        user.update_user_info(time_zone=time_zone)
+
+        if user.time_zone >= 0:
+            time_zone_str = "+" + str(user.time_zone)
+        else:
+            time_zone_str = str(user.time_zone)
+
+        await state.set_state(user_state.InitialState.waiting_for_settings)
+        msg = "Часовой пояс установлен: UTC" + time_zone_str
+        answer_dict = settings_dict
+        if not user.check():
+            answer_dict = initial_settings_dict
+        await state.set_state(user_state.InitialState.waiting_for_settings)
+        await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.dict_menu(answer_dict, 2))
+    except ValueError:
+        msg = "Неправильный формат! Введи значение в формате +Ч или -Ч. Например, +3 для Москвы."
+        await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.cancel())
+
+
 async def handle_set_notification_time(message: types.Message, state: FSMContext):
     user = await validate(message, state)
     if user is None:
         return
 
-    msg = "Выбери время, когда тебе удобно получать уведомления. Введи московское время в формате ЧЧ:ММ. Например: " \
+    msg = "Выбери время, когда тебе удобно получать уведомления. Введи время в формате ЧЧ:ММ. Например: " \
           "13:00"
     if user.notification_time is not None:
         msg += "\nТекущее время для уведомлений: " + user.notification_time
@@ -147,14 +195,14 @@ async def handle_action_set_notification_time(message: types.Message, state: FSM
         user.update_user_info(notification_time=parsed_time_str)
 
         await state.set_state(user_state.InitialState.waiting_for_settings)
-        msg = "Время для уведомлений установлено: " + parsed_time_str + " по московскому времени"
+        msg = "Время для уведомлений установлено: " + parsed_time_str
         answer_dict = settings_dict
         if not user.check():
             answer_dict = initial_settings_dict
         await state.set_state(user_state.InitialState.waiting_for_settings)
         await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.dict_menu(answer_dict, 2))
     except ValueError:
-        msg = "Неправильный формат! Введи московское время в формате ЧЧ:ММ. Например: 13:00"
+        msg = "Неправильный формат! Введи время в формате ЧЧ:ММ. Например: 13:00"
         await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.cancel())
 
 
@@ -308,6 +356,9 @@ def register_handlers_main():
     common.dp.register_message_handler(handle_cancel,
                                        text=['/cancel', 'Отмена', 'Главное меню', 'Время дарить подарки!'], state='*')
     common.dp.register_message_handler(handle_action_user_accept, state=user_state.InitialState.waiting_for_accept)
+    common.dp.register_message_handler(handle_set_time_zone,
+                                       text=['/time_zone', settings_dict['time_zone']],
+                                       state=[user_state.InitialState.waiting_for_settings])
     common.dp.register_message_handler(handle_set_notification_time,
                                        text=['/notification_time', settings_dict['notification_time']],
                                        state=[user_state.InitialState.waiting_for_settings])
@@ -316,6 +367,8 @@ def register_handlers_main():
     common.dp.register_message_handler(handle_set_latest_date, text=['/set_latest_date',
                                        settings_dict['set_latest_date']],
                                        state=[user_state.InitialState.waiting_for_settings])
+    common.dp.register_message_handler(handle_action_set_time_zone,
+                                       state=[user_state.InitialState.waiting_for_set_time_zone])
     common.dp.register_message_handler(handle_action_set_notification_time,
                                        state=[user_state.InitialState.waiting_for_set_notification_time])
     common.dp.register_message_handler(handle_action_set_days, state=[user_state.InitialState.waiting_for_set_days])

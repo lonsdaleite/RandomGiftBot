@@ -3,14 +3,14 @@ import config
 from db import sql_connect
 
 
-def update_user_info(user_id, tg_id=None, notification_time=None, min_days_num=None, max_days_num=None,
+def update_user_info(user_id, tg_id=None, time_zone=None, notification_time=None, min_days_num=None, max_days_num=None,
                      time_to_gift_flg=None):
     if user_id is None:
         config.logger.error("Can not add a user info without user_id")
         return
 
-    if tg_id is None and notification_time is None and min_days_num is None and max_days_num is None \
-            and time_to_gift_flg is None:
+    if tg_id is None and time_zone is None and notification_time is None and min_days_num is None \
+            and max_days_num is None and time_to_gift_flg is None:
         config.logger.error("Can't update user_id: " + str(user_id) + " info. No arguments passed.")
         return
 
@@ -35,6 +35,13 @@ def update_user_info(user_id, tg_id=None, notification_time=None, min_days_num=N
             SET tg_id = ?
             WHERE user_id = ? and deleted_flg = '0'
             """, (tg_id, user_id))
+
+    if time_zone is not None:
+        cursor.execute("""
+            UPDATE user
+            SET time_zone = ?
+            WHERE user_id = ? and deleted_flg = '0'
+            """, (time_zone, user_id))
 
     if notification_time is not None:
         cursor.execute("""
@@ -108,6 +115,7 @@ def add_user(tg_id=None):
 
     row = cursor.fetchone()
 
+    user_id = None
     if row is None:
         cursor.execute("""
             SELECT coalesce(max(user_id), 0) + 1 
@@ -169,7 +177,7 @@ def add_gift(user_id, gift_dt):
     conn.close()
 
 
-def add_notification_log(user_id, notification_time, sent_flg):
+def add_notification_log(user_id, time_zone, notification_time, sent_flg):
     if user_id is None:
         config.logger.error("Can not log info without user_id")
         return
@@ -184,9 +192,9 @@ def add_notification_log(user_id, notification_time, sent_flg):
         """, (user_id,))
 
     cursor.execute("""
-    INSERT INTO notification_log (user_id, notification_time, sent_flg, is_active_flg, processed_dttm) 
-    VALUES (?, ?, ?, ?, ?)
-    """, (user_id, notification_time, sent_flg, '1', datetime.now()))
+    INSERT INTO notification_log (user_id, time_zone, notification_time, sent_flg, is_active_flg, processed_dttm) 
+    VALUES (?, ?, ?, ?, ?, ?)
+    """, (user_id, time_zone, notification_time, sent_flg, '1', datetime.now()))
 
     config.logger.info("user_id: " + str(user_id) + " notification log added")
 

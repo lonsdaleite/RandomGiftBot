@@ -6,6 +6,7 @@ class User:
     def __init__(self, user_id, tg_id):
         self.user_id = None
         self.tg_id = None
+        self.time_zone = None
         self.notification_time = None
         self.min_days_num = None
         self.max_days_num = None
@@ -16,6 +17,7 @@ class User:
 
     def check(self):
         if self.tg_id is None \
+                or self.time_zone is None \
                 or self.notification_time is None \
                 or self.min_days_num is None \
                 or self.max_days_num is None \
@@ -29,6 +31,7 @@ class User:
         if user_info is not None:
             self.user_id = user_info["user_id"]
             self.tg_id = user_info["tg_id"]
+            self.time_zone = user_info["time_zone"]
             self.notification_time = user_info["notification_time"]
             self.min_days_num = user_info["min_days_num"]
             self.max_days_num = user_info["max_days_num"]
@@ -45,9 +48,9 @@ class User:
         dml_actions.add_gift(self.user_id, gift_dt)
         self.refresh()
 
-    def update_user_info(self, tg_id=None, notification_time=None, min_days_num=None, max_days_num=None,
+    def update_user_info(self, tg_id=None, time_zone=None, notification_time=None, min_days_num=None, max_days_num=None,
                          time_to_gift_flg=None):
-        dml_actions.update_user_info(self.user_id, tg_id=tg_id, notification_time=notification_time,
+        dml_actions.update_user_info(self.user_id, tg_id=tg_id, time_zone=time_zone, notification_time=notification_time,
                                      min_days_num=min_days_num, max_days_num=max_days_num,
                                      time_to_gift_flg=time_to_gift_flg)
         self.refresh()
