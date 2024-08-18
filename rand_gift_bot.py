@@ -301,6 +301,8 @@ async def handle_action_set_latest_date(callback: CallbackQuery, callback_data: 
         await callback.message.answer(msg,
             reply_markup=bot_reply_markup.dict_menu(answer_dict, 2)
         )
+    else:
+        await handle_cancel(callback=callback, state=state)
 
 
 async def handle_gift_done(message: types.Message, state: FSMContext):
@@ -355,9 +357,9 @@ async def handle_days(message: types.Message, state: FSMContext):
     await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.dict_menu(response_dict))
 
 
-async def handle_cancel(message: types.Message, state: FSMContext):
+async def handle_cancel(message: types.Message = None, state: FSMContext = None, callback: CallbackQuery = None):
     await state.clear()
-    user = await validate(message, state)
+    user = await validate(message=message, state=state, callback=callback)
     if user is None:
         return
 
