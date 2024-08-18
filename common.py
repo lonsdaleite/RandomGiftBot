@@ -2,6 +2,8 @@ import traceback
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.exceptions import TelegramAPIError, AiogramError
+from aiogram.types import CallbackQuery
+
 import config
 import user as us
 from db import dml_actions
@@ -13,15 +15,22 @@ bot = Bot(token=config.BOT_TG_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
 
-async def print_log(user, message, state, command_dict=None):
-    tg_id = message.from_user.id
+async def print_log(user, message, state, callback: CallbackQuery = None, command_dict=None):
+    if callback is not None:
+        tg_id = callback.from_user.id
+    else:
+        tg_id = message.from_user.id
     text = "No text"
-    if message.text is not None:
+    if callback is not None:
+        text = callback.data
+    elif message.text is not None:
         text = message.text
     elif message.caption is not None:
         text = message.caption
 
-    user_state = str(await state.get_state())
+    user_state = ""
+    if state is not None:
+        user_state = str(await state.get_state())
 
     if user is None:
         config.logger.info("Unknown user found:\nID: " + str(tg_id))

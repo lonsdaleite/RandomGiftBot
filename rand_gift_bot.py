@@ -4,7 +4,11 @@ import re
 import time
 from aiogram import types
 from aiogram.filters import StateFilter
+from aiogram.filters.callback_data import CallbackData
 from aiogram.fsm.context import FSMContext
+from aiogram.types import CallbackQuery
+from aiogram_calendar import SimpleCalendar, SimpleCalendarCallback, DialogCalendar, DialogCalendarCallback, \
+    get_user_locale
 import bot_reply_markup
 import common
 import notification
@@ -30,7 +34,7 @@ settings_dict['cancel'] = 'Главное меню'
 
 gift_done_dict = dict(today="Сегодня",
                       yesterday="Вчера",
-                      date="Ввести дату",
+                      date="Выбрать дату",
                       cancel="Отмена")
 
 
@@ -64,15 +68,21 @@ async def handle_welcome(message: types.Message, state: FSMContext):
 # All the handlers call it first
 # If user accepted the conversation, returns a User object
 # Else returns None
-async def validate(message: types.Message, state: FSMContext):
-    user = common.get_user(message=message)
-    await common.print_log(user, message, state, extra_command_dict)
+async def validate(message: types.Message = None, state: FSMContext = None, callback: CallbackQuery = None):
+    if callback is not None:
+        user = common.get_user(tg_id=callback.from_user.id)
+    else:
+        user = common.get_user(message=message)
+
+    await common.print_log(user, message, state, callback=callback, command_dict=extra_command_dict)
 
     if user is None:
         await request_user_accept(message, state)
         return None
 
-    current_state = await state.get_state()
+    current_state = None
+    if state is not None:
+        current_state = await state.get_state()
 
     if not user.check() and current_state is None:
         await request_settings(message, state)
@@ -160,7 +170,6 @@ async def handle_action_set_time_zone(message: types.Message, state: FSMContext)
         else:
             time_zone_str = str(user.time_zone)
 
-        await state.set_state(user_state.InitialState.waiting_for_settings)
         msg = "Часовой пояс установлен: UTC" + time_zone_str
         answer_dict = settings_dict
         if not user.check():
@@ -197,7 +206,6 @@ async def handle_action_set_notification_time(message: types.Message, state: FSM
 
         user.update_user_info(notification_time=parsed_time_str)
 
-        await state.set_state(user_state.InitialState.waiting_for_settings)
         msg = "Время для уведомлений установлено: " + parsed_time_str
         answer_dict = settings_dict
         if not user.check():
@@ -240,7 +248,6 @@ async def handle_action_set_days(message: types.Message, state: FSMContext):
 
         user.update_user_info(min_days_num=min_days_num, max_days_num=max_days_num)
 
-        await state.set_state(user_state.InitialState.waiting_for_settings)
         msg = "Интервал установлен: " + str(user.min_days_num) + "-" + str(user.max_days_num)
         answer_dict = settings_dict
         if not user.check():
@@ -258,35 +265,42 @@ async def handle_set_latest_date(message: types.Message, state: FSMContext):
     if user is None:
         return
 
-    msg = "Укажи дату, когда ты в последний раз дарил(а) подарок. Формат даты YYYY-MM-DD. Например: 2022-04-15."
+    msg = "Укажи дату, когда ты в последний раз дарил(а) подарок."
     if user.latest_gift_dt is not None:
         msg += "\nДата, про которую я знаю: " + user.latest_gift_dt
     await state.set_state(user_state.InitialState.waiting_for_set_latest_date)
-    await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.cancel())
+    calendar = SimpleCalendar(
+        locale=await get_user_locale(message.from_user), show_alerts=True
+    )
+    calendar.set_dates_range(datetime(2000, 1, 1), datetime.today())
+    await common.send_message(user.tg_id, msg,
+          reply_markup=await calendar.start_calendar())
 
 
-async def handle_action_set_latest_date(message: types.Message, state: FSMContext):
-    user = await validate(message, state)
+async def handle_action_set_latest_date(callback: CallbackQuery, callback_data: CallbackData, state: FSMContext):
+    user = await validate(state=state, callback=callback)
     if user is None:
         return
 
-    try:
-        dt_str = message.text
-        datetime.strptime(dt_str, "%Y-%m-%d")
+    calendar = SimpleCalendar(
+        locale=await get_user_locale(callback.from_user), show_alerts=True
+    )
+    calendar.set_dates_range(datetime(2000, 1, 1), datetime.today())
+    selected, date = await calendar.process_selection(callback, callback_data)
+    if selected:
+        dt_str = date.strftime("%Y-%m-%d")
 
         user.add_gift(dt_str)
         user.update_user_info(time_to_gift_flg=False)
 
-        await state.set_state(user_state.InitialState.waiting_for_settings)
         msg = "Дата последнего подарка: " + dt_str
         answer_dict = settings_dict
         if not user.check():
             answer_dict = initial_settings_dict
         await state.set_state(user_state.InitialState.waiting_for_settings)
-        await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.dict_menu(answer_dict, 2))
-    except ValueError:
-        msg = "Неправильный формат! Формат даты YYYY-MM-DD. Например: 2022-04-15."
-        await common.send_message(user.tg_id, msg, reply_markup=bot_reply_markup.cancel())
+        await callback.message.answer(msg,
+            reply_markup=bot_reply_markup.dict_menu(answer_dict, 2)
+        )
 
 
 async def handle_gift_done(message: types.Message, state: FSMContext):
@@ -361,7 +375,7 @@ def register_handlers_main():
     common.dp.message.register(handle_action_user_accept, StateFilter(user_state.InitialState.waiting_for_accept))
     common.dp.message.register(handle_set_time_zone,
                                TextFilter(['/time_zone', settings_dict['time_zone']]),
-                                       StateFilter(user_state.InitialState.waiting_for_settings))
+                               StateFilter(user_state.InitialState.waiting_for_settings))
     common.dp.message.register(handle_set_notification_time,
                                TextFilter(['/notification_time', settings_dict['notification_time']]),
                                StateFilter(user_state.InitialState.waiting_for_settings))
@@ -375,8 +389,8 @@ def register_handlers_main():
     common.dp.message.register(handle_action_set_notification_time,
                                StateFilter(user_state.InitialState.waiting_for_set_notification_time))
     common.dp.message.register(handle_action_set_days, StateFilter(user_state.InitialState.waiting_for_set_days))
-    common.dp.message.register(handle_action_set_latest_date,
-                               StateFilter(user_state.InitialState.waiting_for_set_latest_date))
+    common.dp.callback_query.register(handle_action_set_latest_date, SimpleCalendarCallback.filter(),
+                                      StateFilter(user_state.InitialState.waiting_for_set_latest_date))
     common.dp.message.register(handle_settings, TextFilter(['/settings', extra_command_dict['settings']]))
     common.dp.message.register(handle_days, TextFilter(['/days', extra_command_dict['days']]))
     common.dp.message.register(handle_gift_done, TextFilter(['/gift_done', extra_command_dict['gift_done']]))
