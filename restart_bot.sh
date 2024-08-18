@@ -30,11 +30,17 @@ if [ -z "$LOG_FILE" ] || [ ! -f "$LOG_FILE" ]; then
     check_network
     echo "Bot started"
     pushd $dir
+    if [ -f "$dir/venv/bin/activate" ]; then
+      source $dir/venv/bin/activate
+    fi
     python3 -u $dir/$bot_file_name
     popd
 else
     check_network 2>&1 | tee -a $LOG_FILE
     pushd $dir
+    if [ -f "$dir/venv/bin/activate" ]; then
+      source $dir/venv/bin/activate
+    fi
     nohup python3 -u $dir/$bot_file_name >> $LOG_FILE 2>&1 &
     popd
     echo "Bot started" | tee -a $LOG_FILE
