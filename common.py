@@ -1,7 +1,7 @@
 import traceback
 from aiogram import Bot, Dispatcher
-from aiogram.contrib.fsm_storage.memory import MemoryStorage
-from aiogram.utils.exceptions import BotBlocked
+from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.exceptions import TelegramAPIError, AiogramError
 import config
 import user as us
 from db import dml_actions
@@ -10,7 +10,7 @@ user_dict = {}
 
 # Bot initialization
 bot = Bot(token=config.BOT_TG_TOKEN)
-dp = Dispatcher(bot, storage=MemoryStorage())
+dp = Dispatcher(storage=MemoryStorage())
 
 
 async def print_log(user, message, state, command_dict=None):
@@ -45,11 +45,16 @@ async def send_message(tg_id, text, reply_markup=None):
                                    reply_markup=reply_markup)
         else:
             await bot.send_message(tg_id, text, reply_markup=reply_markup)
-    except BotBlocked:
-        config.logger.warn("Bot blocked for user: " + str(tg_id))
-        dml_actions.disable_user(get_user(tg_id=tg_id).user_id)
-        user_dict.pop(tg_id)
-    except:
+        pass
+    except TelegramAPIError as e:
+        if "bot was blocked by the user" in str(e):
+            config.logger.warn("Bot blocked for user: " + str(tg_id))
+            dml_actions.disable_user(get_user(tg_id=tg_id).user_id)
+            user_dict.pop(tg_id)
+        else:
+            config.logger.debug("Can not send a message to: " + str(tg_id))
+            traceback.print_exc()
+    except AiogramError:
         config.logger.debug("Can not send a message to: " + str(tg_id))
         traceback.print_exc() 
 

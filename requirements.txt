@@ -1,4 +1,5 @@
-aiogram>=2.12
-aioschedule>=0.5.2
-pytrovich>=0.0.2
-cherrypy>=18.6.0
+aiogram==3.12.0
+aioschedule==0.5.2
+asyncio==3.4.3
+pytrovich==0.0.4
+cherrypy==18.10.0

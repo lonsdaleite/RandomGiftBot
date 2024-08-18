@@ -2,16 +2,18 @@ from aiogram import types
 
 
 def dict_menu(command_dict, row_width=2):
-    markup = types.ReplyKeyboardMarkup(row_width=row_width, resize_keyboard=True)
-    markup.add(*list(command_dict.values()))
+    buttons = [types.KeyboardButton(text=command) for command in command_dict.values()]
+    # Split buttons into rows of row_width
+    keyboard = [buttons[i:i + row_width] for i in range(0, len(buttons), row_width)]
+    markup = types.ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
     return markup
 
+
+def simple_button(text):
+    return types.ReplyKeyboardMarkup(keyboard = [[types.KeyboardButton(text=text)]], resize_keyboard=True)
 
 def start():
-    markup = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
-    button = types.KeyboardButton(text="Старт")
-    markup.add(button)
-    return markup
+    return simple_button("Старт")
 
 
 def nothing():
@@ -19,18 +21,12 @@ def nothing():
 
 
 def cancel():
-    markup = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
-    markup.add("Отмена")
-    return markup
+    return simple_button("Отмена")
 
 
 def user_accept():
-    markup = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
-    markup.add("Давай начнем!")
-    return markup
+    return simple_button("Давай начнем!")
 
 
 def time_to_gift():
-    markup = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
-    markup.add("Время дарить подарки!")
-    return markup
+    return simple_button("Время дарить подарки!")

@@ -23,15 +23,15 @@ async def notify():
         if user.check() and randomize.send_or_not(user):
             await notify_user(user)
         else:
-            dml_actions.add_notification_log(user.user_id, user.notification_time, "0")
+            dml_actions.add_notification_log(user.user_id, user.time_zone, user.notification_time, "0")
 
 
-async def scheduler(bot):
+async def scheduler():
     aioschedule.every().minute.do(notify)
     while True:
         await aioschedule.run_pending()
         await asyncio.sleep(1)
 
 
-async def run(dp):
-    asyncio.create_task(scheduler(dp.bot))
+async def run():
+    asyncio.create_task(scheduler())
