@@ -1,14 +1,14 @@
 import asyncio
-from datetime import date, datetime, timedelta
 import re
 import time
+from datetime import date, datetime, timedelta
+
 from aiogram import types
 from aiogram.filters import StateFilter
-from aiogram.filters.callback_data import CallbackData
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
-from aiogram_calendar import SimpleCalendar, SimpleCalendarCallback, DialogCalendar, DialogCalendarCallback, \
-    get_user_locale
+from aiogram_calendar import SimpleCalendar, SimpleCalendarCallback, get_user_locale
+
 import bot_reply_markup
 import common
 import notification
@@ -277,7 +277,7 @@ async def handle_set_latest_date(message: types.Message, state: FSMContext):
           reply_markup=await calendar.start_calendar())
 
 
-async def handle_action_set_latest_date(callback: CallbackQuery, callback_data: CallbackData, state: FSMContext):
+async def handle_action_set_latest_date(callback: CallbackQuery, callback_data: SimpleCalendarCallback, state: FSMContext):
     user = await validate(state=state, callback=callback)
     if user is None:
         return
@@ -286,9 +286,9 @@ async def handle_action_set_latest_date(callback: CallbackQuery, callback_data: 
         locale=await get_user_locale(callback.from_user), show_alerts=True
     )
     calendar.set_dates_range(datetime(2000, 1, 1), datetime.today())
-    selected, date = await calendar.process_selection(callback, callback_data)
+    selected, dt = await calendar.process_selection(callback, callback_data)
     if selected:
-        dt_str = date.strftime("%Y-%m-%d")
+        dt_str = dt.strftime("%Y-%m-%d")
 
         user.add_gift(dt_str)
         user.update_user_info(time_to_gift_flg=False)
